@@ -3,68 +3,68 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import streamlit as st
 
-# Caricamento del catalogo dal file CSV
-file_path = "C:\VsCode\myenv\sistema_di_raccomandazione\catalogo_profumi.csv"  # Modifica il percorso
-catalogo = pd.read_csv(file_path)
+# Load the catalog from the CSV file
+file_path = "file.csv"  # Modify the path
+catalog = pd.read_csv(file_path)
 
-# Pulizia dei nomi delle colonne
-catalogo.columns = catalogo.columns.str.strip()
+# Clean column names
+catalog.columns = catalog.columns.str.strip()
 
-# Aggiunta di una colonna 'genere'
-def assegna_genere(row):
-    if 200 <= row['profumo'] < 400:
-        return 'uomo'
-    elif row['profumo'] < 200 or row['profumo'] >= 400:
-        return 'donna'
+# Add a 'gender' column
+def assign_gender(row):
+    if 200 <= row['perfume'] < 400:
+        return 'men'
+    elif row['perfume'] < 200 or row['perfume'] >= 400:
+        return 'women'
     return 'unisex'
 
-catalogo['genere'] = catalogo.apply(assegna_genere, axis=1)
+catalog['gender'] = catalog.apply(assign_gender, axis=1)
 
-# Pre-elaborazione: Creazione di una descrizione unificata
-catalogo['descrizione'] = (
-    catalogo['famiglia_olfattiva'] + " " +
-    catalogo['note_di_testa'].fillna('') + " " +
-    catalogo['note_di_cuore'].fillna('') + " " +
-    catalogo['note_di_fondo'].fillna('')
+# Preprocessing: Create a unified description
+catalog['description'] = (
+    catalog['olfactory_family'] + " " +
+    catalog['top_notes'].fillna('') + " " +
+    catalog['heart_notes'].fillna('') + " " +
+    catalog['base_notes'].fillna('')
 )
 
-# Trasformazione delle descrizioni in vettori TF-IDF
+# Transform descriptions into TF-IDF vectors
 vectorizer = TfidfVectorizer()
-tfidf_matrix = vectorizer.fit_transform(catalogo['descrizione'])
+tfidf_matrix = vectorizer.fit_transform(catalog['description'])
 
-# Calcolo della matrice di similarità
+# Compute similarity matrix
 similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
-# Funzione per ottenere raccomandazioni
-def raccomanda_profumi(profumo_id, top_n=2):
+# Function to get recommendations
+def recommend_perfumes(perfume_id, top_n=2):
     try:
-        profumo_idx = catalogo[catalogo['profumo'] == profumo_id].index[0]
-        profumo_genere = catalogo.iloc[profumo_idx]['genere']
+        perfume_idx = catalog[catalog['perfume'] == perfume_id].index[0]
+        perfume_gender = catalog.iloc[perfume_idx]['gender']
     except IndexError:
-        return f"Il profumo con ID {profumo_id} non è stato trovato nel catalogo."
+        return f"The perfume with ID {perfume_id} was not found in the catalog."
     
-    similarity_scores = list(enumerate(similarity_matrix[profumo_idx]))
+    similarity_scores = list(enumerate(similarity_matrix[perfume_idx]))
     sorted_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
-    recommended_indices = [i[0] for i in sorted_scores[1:] if catalogo.iloc[i[0]]['genere'] == profumo_genere][:top_n]
-    recommended_ids = catalogo.iloc[recommended_indices][['profumo', 'famiglia_olfattiva']].values.tolist()
+    recommended_indices = [i[0] for i in sorted_scores[1:] if catalog.iloc[i[0]]['gender'] == perfume_gender][:top_n]
+    recommended_ids = catalog.iloc[recommended_indices][['perfume', 'olfactory_family']].values.tolist()
     return recommended_ids
 
-# Interfaccia Streamlit
-st.title("Sistema di Raccomandazione Profumi")
+# Streamlit interface
+st.title("Perfume Recommendation System")
 st.write("""
-Questo sistema ti consente di ottenere raccomandazioni personalizzate 
-sulla base di un profumo esistente.
+This system allows you to get personalized recommendations
+based on an existing perfume.
 """)
 
-# Input utente
-profumo_id = st.number_input("Inserisci l'ID del profumo:", min_value=1, step=1)
+# User input
+perfume_id = st.number_input("Enter the perfume ID:", min_value=1, step=1)
 
-# Bottone per ottenere raccomandazioni
-if st.button("Ottieni_Raccomandazioni"):
-    raccomandazioni = raccomanda_profumi(profumo_id)
-    if isinstance(raccomandazioni, str):
-        st.error(raccomandazioni)
+# Button to get recommendations
+if st.button("Get Recommendations"):
+    recommendations = recommend_perfumes(perfume_id)
+    if isinstance(recommendations, str):
+        st.error(recommendations)
     else:
-        st.success("Ecco i profumi consigliati:")
-        for rec in raccomandazioni:
-            st.write(f"**ID:** {rec[0]}, **Famiglia Olfattiva:** {rec[1]}")
+        st.success("Here are the recommended perfumes:")
+        for rec in recommendations:
+            st.write(f"**ID:** {rec[0]}, **Olfactory Family:** {rec[1]}")
