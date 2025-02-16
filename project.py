@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import streamlit as st
+
 
 # Load the catalog from the CSV file
 file_path = "file.csv"  # Modify the path
@@ -49,22 +49,3 @@ def recommend_perfumes(perfume_id, top_n=2):
     recommended_ids = catalog.iloc[recommended_indices][['perfume', 'olfactory_family']].values.tolist()
     return recommended_ids
 
-# Streamlit interface
-st.title("Perfume Recommendation System")
-st.write("""
-This system allows you to get personalized recommendations
-based on an existing perfume.
-""")
-
-# User input
-perfume_id = st.number_input("Enter the perfume ID:", min_value=1, step=1)
-
-# Button to get recommendations
-if st.button("Get Recommendations"):
-    recommendations = recommend_perfumes(perfume_id)
-    if isinstance(recommendations, str):
-        st.error(recommendations)
-    else:
-        st.success("Here are the recommended perfumes:")
-        for rec in recommendations:
-            st.write(f"**ID:** {rec[0]}, **Olfactory Family:** {rec[1]}")
