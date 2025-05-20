@@ -1,51 +1,43 @@
+from flask import Flask, request, jsonify
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+app = Flask(__name__)
 
-# Load the catalog from the CSV file
-file_path = "file.csv"  # Modify the path
-catalog = pd.read_csv("catalogo_profumi.csv")
+# Caricamento del catalogo
+catalogo = pd.read_csv("catalogo_profumi.csv")
 
-# Clean column names
-catalog.columns = catalog.columns.str.strip()
+# Pulizia dei nomi delle colonne
+catalogo.columns = catalogo.columns.str.strip()
 
-# Add a 'gender' column
-def assign_gender(row):
-    if 200 <= row['perfume'] < 400:
-        return 'men'
-    elif row['perfume'] < 200 or row['perfume'] >= 400:
-        return 'women'
-    return 'unisex'
-
-catalog['gender'] = catalog.apply(assign_gender, axis=1)
-
-# Preprocessing: Create a unified description
-catalog['description'] = (
-    catalog['olfactory_family'] + " " +
-    catalog['top_notes'].fillna('') + " " +
-    catalog['heart_notes'].fillna('') + " " +
-    catalog['base_notes'].fillna('')
+# Pre-elaborazione: Creazione di una descrizione unificata
+catalogo['descrizione'] = (
+    catalogo['famiglia_olfattiva'].fillna('') + " " +
+    catalogo['note_di_testa'].fillna('') + " " +
+    catalogo['note_di_cuore'].fillna('') + " " +
+    catalogo['note_di_fondo'].fillna('')
 )
 
-# Transform descriptions into TF-IDF vectors
+# Trasformazione delle descrizioni in vettori TF-IDF
 vectorizer = TfidfVectorizer()
-tfidf_matrix = vectorizer.fit_transform(catalog['description'])
+tfidf_matrix = vectorizer.fit_transform(catalogo['descrizione'])
 
-# Compute similarity matrix
-similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+# Calcolo della matrice di similarità
+similarity_matrix = cosine_similarity(tfidf_matrix)
 
-# Function to get recommendations
-def recommend_perfumes(perfume_id, top_n=2):
+# Endpoint API
+@app.route("/raccomanda", methods=["GET"])
+def raccomanda():
     try:
-        perfume_idx = catalog[catalog['perfume'] == perfume_id].index[0]
-        perfume_gender = catalog.iloc[perfume_idx]['gender']
-    except IndexError:
-        return f"The perfume with ID {perfume_id} was not found in the catalog."
-    
-    similarity_scores = list(enumerate(similarity_matrix[perfume_idx]))
-    sorted_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
-    recommended_indices = [i[0] for i in sorted_scores[1:] if catalog.iloc[i[0]]['gender'] == perfume_gender][:top_n]
-    recommended_ids = catalog.iloc[recommended_indices][['perfume', 'olfactory_family']].values.tolist()
-    return recommended_ids
+        profumo_id = int(request.args.get("id"))
+        idx = catalogo[catalogo['profumo'] == profumo_id].index[0]
+        scores = list(enumerate(similarity_matrix[idx]))
+        sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)[1:4]
+        raccomandazioni = catalogo.iloc[[i[0] for i in sorted_scores]]['profumo'].tolist()
+        return jsonify({"raccomandazioni": raccomandazioni})
+    except:
+        return jsonify({"errore": "ID non valido o non trovato."})
 
+if __name__ == "__main__":
+    app.run()
