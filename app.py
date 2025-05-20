@@ -5,7 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # Load the catalog from the CSV file
 file_path = "file.csv"  # Modify the path
-catalog = pd.read_csv(file_path)
+catalog = pd.read_csv("catalogo_profumi.csv")
 
 # Clean column names
 catalog.columns = catalog.columns.str.strip()
