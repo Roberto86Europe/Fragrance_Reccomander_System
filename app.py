@@ -5,39 +5,39 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
 
-# Caricamento del catalogo
-catalogo = pd.read_csv("catalogo_profumi.csv")
+# Load the perfume catalog
+catalog = pd.read_csv("catalogo_profumi.csv")
 
-# Pulizia dei nomi delle colonne
-catalogo.columns = catalogo.columns.str.strip()
+# Clean column names
+catalog.columns = catalog.columns.str.strip()
 
-# Pre-elaborazione: Creazione di una descrizione unificata
-catalogo['descrizione'] = (
-    catalogo['famiglia_olfattiva'].fillna('') + " " +
-    catalogo['note_di_testa'].fillna('') + " " +
-    catalogo['note_di_cuore'].fillna('') + " " +
-    catalogo['note_di_fondo'].fillna('')
+# Preprocessing: Create a unified description
+catalog['description'] = (
+    catalog['famiglia_olfattiva'].fillna('') + " " +
+    catalog['note_di_testa'].fillna('') + " " +
+    catalog['note_di_cuore'].fillna('') + " " +
+    catalog['note_di_fondo'].fillna('')
 )
 
-# Trasformazione delle descrizioni in vettori TF-IDF
+# Convert descriptions to TF-IDF vectors
 vectorizer = TfidfVectorizer()
-tfidf_matrix = vectorizer.fit_transform(catalogo['descrizione'])
+tfidf_matrix = vectorizer.fit_transform(catalog['description'])
 
-# Calcolo della matrice di similarità
+# Compute similarity matrix
 similarity_matrix = cosine_similarity(tfidf_matrix)
 
-# Endpoint API
-@app.route("/raccomanda", methods=["GET"])
-def raccomanda():
+# API Endpoint
+@app.route("/recommend", methods=["GET"])
+def recommend():
     try:
-        profumo_id = int(request.args.get("id"))
-        idx = catalogo[catalogo['profumo'] == profumo_id].index[0]
+        perfume_id = int(request.args.get("id"))
+        idx = catalog[catalog['profumo'] == perfume_id].index[0]
         scores = list(enumerate(similarity_matrix[idx]))
         sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)[1:4]
-        raccomandazioni = catalogo.iloc[[i[0] for i in sorted_scores]]['profumo'].tolist()
-        return jsonify({"raccomandazioni": raccomandazioni})
+        recommendations = catalog.iloc[[i[0] for i in sorted_scores]]['profumo'].tolist()
+        return jsonify(recommendations)
     except:
-        return jsonify({"errore": "ID non valido o non trovato."})
+        return jsonify({"error": "Invalid or not found ID."})
 
 if __name__ == "__main__":
     app.run()
